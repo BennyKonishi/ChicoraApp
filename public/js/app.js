@@ -240,9 +240,30 @@
     if (withPos) map.setView([withPos.lat, withPos.lng], 12);
   }
 
+  // async function loadMarkers() {
+  //   const data = await api('/api/markers');
+  //   renderMarkers(data.markers);
+  // }
+
   async function loadMarkers() {
-    const data = await api('/api/markers');
-    renderMarkers(data.markers);
+    // Define your built-in coordinates and labels here
+    const builtInMarkers = [
+      { id: 'pin1', lat: 43.6727, lng: -79.4074, label: 'Slime Manor (retired)', addedBy: 'System' },
+      { id: 'pin2', lat: 43.6742, lng: -79.4239, label: 'Shaw Jungle', addedBy: 'System' },
+      { id: 'pin3', lat: 43.6475, lng: -79.4112, label: 'Bellwoods Boba Junkies', addedBy: 'System' },
+      { id: 'pin4', lat: 43.6621, lng: -79.4254, label: 'Trevors Apartment', addedBy: 'System' },
+      { id: 'pin5', lat: 43.6611, lng: -79.4046, label: 'Slime Manor (future)', addedBy: 'System' },
+      { id: 'pin6', lat: 43.6691, lng: -79.3890, label: 'Earls', addedBy: 'System' },
+      { id: 'pin7', lat: 43.6646, lng: -79.3956, label: 'Munk', addedBy: 'System' },
+      { id: 'pin8', lat: 43.6491, lng: -79.4209, label: 'TwoTwoTuesday', addedBy: 'System' },
+      { id: 'pin9', lat: 43.6742, lng: -79.3901, label: 'Ramyun Park', addedBy: 'System' },
+      { id: 'pin10', lat: 43.6670, lng: -79.4023, label: 'I Can Touch It though...', addedBy: 'System' },
+      { id: 'pin11', lat: 43.6458, lng: -79.4008, label: 'Trevors Roomate Works Here', addedBy: 'System' },
+      { id: 'pin12', lat: 43.6426, lng: -79.3871, label: 'Nuke Blast Zone', addedBy: 'System' }
+    ];
+
+    // Pass the hardcoded array directly to the render function
+    renderMarkers(builtInMarkers);
   }
 
   function startGeolocation() {

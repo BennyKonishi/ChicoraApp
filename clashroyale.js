@@ -28,8 +28,7 @@ function authHeaders() {
 }
 
 async function findClanTagByName(name) {
-  'const url = `${API_BASE}/clans?name=${encodeURIComponent(name)}&limit=5`;'
-  const url = 'https://api.clashroyale.com/v1/clans/%23RUVYUJUV/members?limit=1000'
+  const url = `${API_BASE}/clans?name=${encodeURIComponent(name)}&limit=5`;
   const res = await fetch(url, { headers: authHeaders() });
   if (!res.ok) {
     const body = await res.text();
