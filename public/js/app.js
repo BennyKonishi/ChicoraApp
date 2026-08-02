@@ -222,6 +222,40 @@
 
   function renderUsers(users) {
     users.forEach(upsertUserMarker);
+    renderUserSidebar(users);
+  }
+
+  function renderUserSidebar(users) {
+    const list = $('#user-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const sorted = users.slice().sort((a, b) => {
+      const aMe = me && a.username === me.username;
+      const bMe = me && b.username === me.username;
+      if (aMe && !bMe) return -1;
+      if (bMe && !aMe) return 1;
+      return a.username.localeCompare(b.username);
+    });
+
+    sorted.forEach((user) => {
+      const isMe = me && user.username === me.username;
+      const row = el('div', 'user-row' + (isMe ? ' me' : ''));
+
+      const pill = el('div', 'avatar-pill');
+      avatarPill(pill, user.avatar);
+
+      const name = el('span', 'name');
+      name.textContent = isMe ? 'me' : user.username;
+
+      const dot = el('span', 'dot' + (typeof user.lat === 'number' ? ' live' : ''));
+      dot.title = typeof user.lat === 'number' ? 'sharing location' : 'no location yet';
+
+      row.appendChild(pill);
+      row.appendChild(name);
+      row.appendChild(dot);
+      list.appendChild(row);
+    });
   }
 
   function renderMarkers(markers) {
@@ -255,18 +289,18 @@
   async function loadMarkers() {
     // Define your built-in coordinates and labels here
     const builtInMarkers = [
-      { id: 'pin1', lat: 43.6727, lng: -79.4074, label: 'Slime Manor (retired)', addedBy: 'System' },
-      { id: 'pin2', lat: 43.6742, lng: -79.4239, label: 'Shaw Jungle', addedBy: 'System' },
-      { id: 'pin3', lat: 43.6475, lng: -79.4112, label: 'Bellwoods Boba Junkies', addedBy: 'System' },
-      { id: 'pin4', lat: 43.6621, lng: -79.4254, label: 'Trevors Apartment', addedBy: 'System' },
-      { id: 'pin5', lat: 43.6611, lng: -79.4046, label: 'Slime Manor (future)', addedBy: 'System' },
-      { id: 'pin6', lat: 43.6691, lng: -79.3890, label: 'Earls', addedBy: 'System' },
-      { id: 'pin7', lat: 43.6646, lng: -79.3956, label: 'Munk', addedBy: 'System' },
-      { id: 'pin8', lat: 43.6491, lng: -79.4209, label: 'TwoTwoTuesday', addedBy: 'System' },
-      { id: 'pin9', lat: 43.6742, lng: -79.3901, label: 'Ramyun Park', addedBy: 'System' },
-      { id: 'pin10', lat: 43.6670, lng: -79.4023, label: 'I Can Touch It though...', addedBy: 'System' },
-      { id: 'pin11', lat: 43.6458, lng: -79.4008, label: 'Trevors Roomate Works Here', addedBy: 'System' },
-      { id: 'pin12', lat: 43.6426, lng: -79.3871, label: 'Nuke Blast Zone', addedBy: 'System' }
+      { id: 'pin1', lat: 43.67599105834961, lng: -79.3990478515625, label: 'Slime Manor (retired)', addedBy: 'System' },
+      { id: 'pin2', lat: 43.67374, lng: -79.42816, label: 'Shaw Jungle', addedBy: 'System' },
+      { id: 'pin3', lat: 43.6475, lng: -79.41126, label: 'Bellwoods Boba Junkies', addedBy: 'System' },
+      { id: 'pin4', lat: 43.66210174560547, lng: -79.42513275146484, label: 'Trevors Apartment', addedBy: 'System' },
+      { id: 'pin5', lat: 43.66355, lng: -79.40393, label: 'Slime Manor (future)', addedBy: 'System' },
+      { id: 'pin6', lat: 43.669889, lng: -79.38755, label: 'Earls', addedBy: 'System' },
+      { id: 'pin7', lat: 43.6650713, lng: -79.3964198, label: 'Munk', addedBy: 'System' },
+      { id: 'pin8', lat: 43.649196, lng: -79.4235552, label: 'TwoTwoTuesday', addedBy: 'System' },
+      { id: 'pin9', lat: 43.6768704, lng: -79.389677, label: 'Ramyun Park', addedBy: 'System' },
+      { id: 'pin10', lat: 43.6672285, lng: -79.4024532, label: 'I Can Touch It though...', addedBy: 'System' },
+      { id: 'pin11', lat: 43.64586, lng: -79.40081, label: 'Trevors Roomate Works Here', addedBy: 'System' },
+      { id: 'pin12', lat: 43.6425637, lng: -79.3870872, label: 'Nuke Blast Zone', addedBy: 'System' }
     ];
 
     // Pass the hardcoded array directly to the render function

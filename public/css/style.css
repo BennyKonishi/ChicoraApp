@@ -364,7 +364,88 @@ button {
 /* ---------- map card ---------- */
 
 #map-card { grid-area: map; min-height: 460px; }
+
+.map-body {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 340px;
+}
+
 #map { flex: 1; border-radius: 8px; overflow: hidden; border: 1px solid var(--line-soft); min-height: 340px; }
+
+.user-sidebar {
+  width: 160px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--line-soft);
+  padding-left: 12px;
+}
+
+.user-sidebar-title {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin-bottom: 8px;
+}
+
+.user-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 7px;
+  border-radius: 7px;
+  font-size: 13px;
+}
+
+.user-row.me {
+  background: rgba(217, 154, 63, 0.14);
+  border: 1px solid rgba(217, 154, 63, 0.3);
+}
+
+.user-row .avatar-pill { width: 24px; height: 24px; font-size: 12px; flex-shrink: 0; }
+
+.user-row .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-row .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.user-row .dot.live { background: var(--good); }
+
+@media (max-width: 900px) {
+  .map-body { flex-direction: column; }
+  .user-sidebar {
+    width: auto;
+    border-left: none;
+    border-top: 1px solid var(--line-soft);
+    padding-left: 0;
+    padding-top: 10px;
+    max-height: 140px;
+  }
+  .user-list { flex-direction: row; flex-wrap: wrap; overflow-y: visible; }
+  .user-row { width: auto; }
+}
 
 .marker-form {
   display: flex;
@@ -653,9 +734,11 @@ button {
 /* scrollbars */
 .beer-tally::-webkit-scrollbar,
 .clan-members::-webkit-scrollbar,
+.user-list::-webkit-scrollbar,
 .chat-messages::-webkit-scrollbar { width: 6px; }
 .beer-tally::-webkit-scrollbar-thumb,
 .clan-members::-webkit-scrollbar-thumb,
+.user-list::-webkit-scrollbar-thumb,
 .chat-messages::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 
 @media (prefers-reduced-motion: reduce) {

@@ -100,7 +100,13 @@
         <h3>Live map</h3>
         <span class="eyebrow">who's where</span>
       </div>
-      <div id="map"></div>
+      <div class="map-body">
+        <div id="map"></div>
+        <aside class="user-sidebar" id="user-sidebar">
+          <div class="user-sidebar-title">Crew</div>
+          <div class="user-list" id="user-list"></div>
+        </aside>
+      </div>
       <form class="marker-form" id="marker-form">
         <input type="text" id="marker-label" placeholder="Label this spot (e.g. Sam's place)" maxlength="60" />
         <button type="submit">Drop pin here</button>
