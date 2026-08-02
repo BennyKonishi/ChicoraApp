@@ -4,8 +4,8 @@
    ============================================================ */
 
 :root {
-  --bg: #17110b;
-  --bg-grain: #1c150e;
+  --bg: #3a2412;
+  --bg-grain: #402814;
   --panel: #241a11;
   --panel-raised: #2f2216;
   --line: #4a3623;
@@ -37,8 +37,10 @@ html, body {
 
 body {
   background-image:
-    radial-gradient(ellipse at top, rgba(217, 154, 63, 0.06), transparent 60%),
-    repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px);
+          radial-gradient(ellipse at top, rgba(217, 154, 63, 0.08), transparent 60%),
+          repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px),
+          url("/assets/gif/LV.png");
+  background-size: auto, auto, 90px 90px;
 }
 
 a { color: var(--accent-bright); }
@@ -412,6 +414,15 @@ button {
 .user-row.me {
   background: rgba(217, 154, 63, 0.14);
   border: 1px solid rgba(217, 154, 63, 0.3);
+}
+
+.user-row.clickable {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.user-row.clickable:hover {
+  background: var(--panel-raised);
 }
 
 .user-row .avatar-pill { width: 24px; height: 24px; font-size: 12px; flex-shrink: 0; }

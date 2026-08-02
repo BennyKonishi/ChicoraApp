@@ -251,6 +251,17 @@
       const dot = el('span', 'dot' + (typeof user.lat === 'number' ? ' live' : ''));
       dot.title = typeof user.lat === 'number' ? 'sharing location' : 'no location yet';
 
+      const hasLocation = typeof user.lat === 'number' && typeof user.lng === 'number';
+      if (hasLocation) {
+        row.classList.add('clickable');
+        row.title = `Zoom to ${isMe ? 'me' : user.username}`;
+        row.addEventListener('click', () => {
+          map.flyTo([user.lat, user.lng], Math.max(map.getZoom(), 14));
+          const marker = userMarkers[user.username];
+          if (marker) marker.openPopup();
+        });
+      }
+
       row.appendChild(pill);
       row.appendChild(name);
       row.appendChild(dot);
