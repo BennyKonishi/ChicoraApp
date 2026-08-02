@@ -1,0 +1,663 @@
+/* ============================================================
+   The Muster — design tokens
+   Theme: a friend group's tavern notice board / mission table.
+   ============================================================ */
+
+:root {
+  --bg: #17110b;
+  --bg-grain: #1c150e;
+  --panel: #241a11;
+  --panel-raised: #2f2216;
+  --line: #4a3623;
+  --line-soft: #382a1b;
+  --text: #f1e6d2;
+  --text-dim: #b9a687;
+  --text-faint: #8a795f;
+  --accent: #d99a3f;
+  --accent-bright: #f0b94f;
+  --accent-ink: #2a1c0d;
+  --good: #7a9d6b;
+  --bad: #b1503f;
+  --radius: 10px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse at top, rgba(217, 154, 63, 0.06), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px);
+}
+
+a { color: var(--accent-bright); }
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+::selection { background: var(--accent); color: var(--accent-ink); }
+
+.hidden { display: none !important; }
+
+/* ---------- scaffolding ---------- */
+
+#auth-view, #app-view {
+  min-height: 100vh;
+}
+
+.center-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* ---------- auth screen ---------- */
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.auth-brand h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 28px;
+  margin: 0;
+  letter-spacing: 0.2px;
+}
+
+.auth-brand .tagline {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 9px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 13.5px;
+  border-radius: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tabs button.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.field { margin-bottom: 14px; }
+
+.field label {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.field input {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14.5px;
+  font-family: var(--font-body);
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(217, 154, 63, 0.18);
+}
+
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.avatar-choice {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 2px solid var(--line-soft);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+
+.avatar-choice:hover { transform: translateY(-2px); }
+
+.avatar-choice.selected {
+  border-color: var(--accent-bright);
+  box-shadow: 0 0 0 2px rgba(240, 185, 79, 0.25);
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: 0.02em;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.btn-primary:hover { background: var(--accent-bright); }
+.btn-primary:active { transform: scale(0.99); }
+
+.btn-secondary {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.btn-secondary:hover { color: var(--text); border-color: var(--accent); }
+
+.form-error {
+  background: rgba(177, 80, 63, 0.15);
+  border: 1px solid rgba(177, 80, 63, 0.4);
+  color: #e5b3a9;
+  padding: 9px 11px;
+  border-radius: 7px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+/* ---------- app shell ---------- */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel), var(--bg));
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gif-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  position: relative;
+  background: var(--bg);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.gif-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.15s ease;
+}
+
+.gif-badge .gif-poster { opacity: 1; }
+.gif-badge .gif-motion { opacity: 0; }
+
+.gif-badge.playing .gif-poster { opacity: 0; }
+.gif-badge.playing .gif-motion { opacity: 1; }
+
+.brand-text h2 {
+  font-family: var(--font-display);
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.brand-text .tagline {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-pill {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  border: 1px solid var(--line);
+}
+
+.user-chip .username {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* ---------- dashboard grid ---------- */
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  grid-template-areas:
+    "map beer"
+    "map clan"
+    "chat chat";
+  gap: 18px;
+  padding: 20px;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-areas: "map" "beer" "clan" "chat";
+  }
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.card-title h3 {
+  font-family: var(--font-display);
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.card-title .eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+/* ---------- map card ---------- */
+
+#map-card { grid-area: map; min-height: 460px; }
+#map { flex: 1; border-radius: 8px; overflow: hidden; border: 1px solid var(--line-soft); min-height: 340px; }
+
+.marker-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.marker-form input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+.marker-form button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel-raised);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.marker-form button:hover { border-color: var(--accent); }
+
+.map-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 6px;
+  font-family: var(--font-mono);
+}
+
+/* ---------- beer board (signature element) ---------- */
+
+#beer-card { grid-area: beer; }
+
+.beer-tally {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 60px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.beer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  background: var(--panel-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  font-size: 13.5px;
+}
+
+.beer-row .avatar-pill { width: 26px; height: 26px; font-size: 13px; }
+
+.beer-row .since {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
+.beer-empty {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  font-style: italic;
+  padding: 8px 2px;
+}
+
+.beer-btn-wrap { margin-top: 14px; }
+
+.beer-btn {
+  width: 100%;
+  position: relative;
+  padding: 13px;
+  border-radius: 9px;
+  border: 1px solid var(--accent);
+  background: var(--accent-ink);
+  color: var(--accent-bright);
+  font-weight: 700;
+  font-size: 15px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.beer-btn .foam {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: translateY(101%);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: -1;
+}
+
+.beer-btn.joined .foam { transform: translateY(0%); }
+.beer-btn.joined { color: var(--accent-ink); }
+
+.beer-btn span.label { position: relative; }
+
+/* ---------- clan dashboard ---------- */
+
+#clan-card { grid-area: clan; }
+
+.clan-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.clan-crest {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--panel-raised);
+  border: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.clan-name { font-weight: 700; font-size: 15px; }
+.clan-tag { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+
+.clan-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.clan-stat {
+  background: var(--panel-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  padding: 8px;
+  text-align: center;
+}
+
+.clan-stat .value {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-bright);
+}
+
+.clan-stat .label {
+  font-size: 9.5px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+.clan-members {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clan-member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 5px 7px;
+  border-radius: 6px;
+}
+.clan-member-row:nth-child(odd) { background: rgba(255,255,255,0.02); }
+
+.clan-member-row .rank {
+  width: 18px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.clan-member-row .name { flex: 1; }
+.clan-member-row .role {
+  font-size: 9.5px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+.clan-member-row .trophies {
+  font-family: var(--font-mono);
+  color: var(--accent-bright);
+  font-size: 11.5px;
+}
+
+.clan-error, .clan-loading {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  padding: 10px 2px;
+}
+
+.clan-refresh {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 0;
+  margin-top: 8px;
+  text-decoration: underline;
+}
+.clan-refresh:hover { color: var(--accent-bright); }
+
+/* ---------- chat card ---------- */
+
+#chat-card { grid-area: chat; height: 340px; }
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+  margin-bottom: 10px;
+}
+
+.chat-msg {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 80%;
+}
+
+.chat-msg .avatar-pill { width: 26px; height: 26px; font-size: 13px; flex-shrink: 0; }
+
+.chat-msg .bubble {
+  background: var(--panel-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  padding: 7px 10px;
+  font-size: 13.5px;
+}
+
+.chat-msg .meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-bottom: 2px;
+}
+
+.chat-msg.self { align-self: flex-end; flex-direction: row-reverse; }
+.chat-msg.self .bubble { background: rgba(217, 154, 63, 0.16); border-color: rgba(217, 154, 63, 0.35); }
+
+.chat-form {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-form input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+.chat-form button {
+  padding: 10px 16px;
+  border-radius: 7px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 13px;
+}
+.chat-form button:hover { background: var(--accent-bright); }
+
+/* scrollbars */
+.beer-tally::-webkit-scrollbar,
+.clan-members::-webkit-scrollbar,
+.chat-messages::-webkit-scrollbar { width: 6px; }
+.beer-tally::-webkit-scrollbar-thumb,
+.clan-members::-webkit-scrollbar-thumb,
+.chat-messages::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

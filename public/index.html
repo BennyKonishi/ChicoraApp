@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Muster</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- ======================= AUTH VIEW ======================= -->
+<div id="auth-view">
+  <div class="center-screen">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="gif-badge" id="auth-gif-badge">
+          <img class="gif-poster" src="/assets/gif/mascot-poster.png" alt="" />
+          <img class="gif-motion" src="/assets/gif/mascot.gif" alt="" />
+        </div>
+        <div>
+          <h1>The Muster</h1>
+          <p class="tagline">where the crew checks in</p>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button type="button" id="tab-login" class="active">Log in</button>
+        <button type="button" id="tab-signup">Sign up</button>
+      </div>
+
+      <div id="auth-error" class="form-error hidden"></div>
+
+      <!-- LOGIN FORM -->
+      <form id="login-form">
+        <div class="field">
+          <label for="login-username">Username</label>
+          <input id="login-username" name="username" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button class="btn-primary" type="submit">Log in</button>
+      </form>
+
+      <!-- SIGNUP FORM -->
+      <form id="signup-form" class="hidden">
+        <div class="field">
+          <label for="signup-username">Username</label>
+          <input id="signup-username" name="username" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="signup-password">Password</label>
+          <input id="signup-password" name="password" type="password" autocomplete="new-password" required />
+        </div>
+        <div class="field">
+          <label for="signup-password2">Confirm password</label>
+          <input id="signup-password2" name="password2" type="password" autocomplete="new-password" required />
+        </div>
+        <div class="field">
+          <label>Pick an icon</label>
+          <div class="avatar-grid" id="avatar-grid"></div>
+        </div>
+        <button class="btn-primary" type="submit">Create account</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= APP VIEW ======================= -->
+<div id="app-view" class="hidden">
+  <header class="app-header">
+    <div class="brand-mark">
+      <div class="gif-badge" id="app-gif-badge">
+        <img class="gif-poster" src="/assets/gif/mascot-poster.png" alt="" />
+        <img class="gif-motion" src="/assets/gif/mascot.gif" alt="" />
+      </div>
+      <div class="brand-text">
+        <h2>The Muster</h2>
+        <p class="tagline">live crew board</p>
+      </div>
+    </div>
+    <div class="user-chip">
+      <div class="avatar-pill" id="me-avatar"></div>
+      <span class="username" id="me-username"></span>
+      <button class="btn-secondary" id="logout-btn">Log out</button>
+    </div>
+  </header>
+
+  <main class="dashboard">
+
+    <!-- MAP -->
+    <section class="card" id="map-card">
+      <div class="card-title">
+        <h3>Live map</h3>
+        <span class="eyebrow">who's where</span>
+      </div>
+      <div id="map"></div>
+      <form class="marker-form" id="marker-form">
+        <input type="text" id="marker-label" placeholder="Label this spot (e.g. Sam's place)" maxlength="60" />
+        <button type="submit">Drop pin here</button>
+      </form>
+      <p class="map-hint">Pins drop at your current location. Friend dots update automatically.</p>
+    </section>
+
+    <!-- BEER BOARD -->
+    <section class="card" id="beer-card">
+      <div class="card-title">
+        <h3>🍺 Beer</h3>
+        <span class="eyebrow" id="beer-count">0 in</span>
+      </div>
+      <div class="beer-tally" id="beer-tally"></div>
+      <div class="beer-btn-wrap">
+        <button class="beer-btn" id="beer-btn">
+          <span class="foam"></span>
+          <span class="label" id="beer-btn-label">I'm in for a beer</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- CLAN DASHBOARD -->
+    <section class="card" id="clan-card">
+      <div class="card-title">
+        <h3>Clan dashboard</h3>
+        <span class="eyebrow">clash royale</span>
+      </div>
+      <div id="clan-body">
+        <div class="clan-loading">Loading clan info…</div>
+      </div>
+    </section>
+
+    <!-- CHAT -->
+    <section class="card" id="chat-card">
+      <div class="card-title">
+        <h3>Chat</h3>
+        <span class="eyebrow">the crew</span>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <form class="chat-form" id="chat-form">
+        <input type="text" id="chat-input" placeholder="Say something…" maxlength="500" autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/avatars.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
