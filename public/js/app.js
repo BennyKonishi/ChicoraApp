@@ -158,7 +158,8 @@
     initSocket();
     startGeolocation();
     wireBeerButton();
-    wireMarkerForm();
+    // Deleted Pin drop code:
+    //wireMarkerForm();
     wireChatForm();
 
     await Promise.all([loadLocations(), loadMarkers(), loadBeer(), loadChatHistory(), loadClan()]);
@@ -331,25 +332,25 @@
     lastSentAt = now;
     api('/api/location', { method: 'POST', body: JSON.stringify(lastKnownPos) }).catch(() => {});
   }
-
-  function wireMarkerForm() {
-    $('#marker-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const input = $('#marker-label');
-      const label = input.value.trim();
-      if (!label) return;
-      if (!lastKnownPos) {
-        alert("We don't have your current location yet — allow location access and try again in a moment.");
-        return;
-      }
-      try {
-        await api('/api/markers', { method: 'POST', body: JSON.stringify({ ...lastKnownPos, label }) });
-        input.value = '';
-      } catch (err) {
-        alert(err.message);
-      }
-    });
-  }
+  //Removed (og pin dropper code):
+  // function wireMarkerForm() {
+  //   $('#marker-form').addEventListener('submit', async (e) => {
+  //     e.preventDefault();
+  //     const input = $('#marker-label');
+  //     const label = input.value.trim();
+  //     if (!label) return;
+  //     if (!lastKnownPos) {
+  //       alert("We don't have your current location yet — allow location access and try again in a moment.");
+  //       return;
+  //     }
+  //     try {
+  //       await api('/api/markers', { method: 'POST', body: JSON.stringify({ ...lastKnownPos, label }) });
+  //       input.value = '';
+  //     } catch (err) {
+  //       alert(err.message);
+  //     }
+  //   });
+  // }
 
   // ---------------- beer board ----------------
   function renderBeer(beerList) {
