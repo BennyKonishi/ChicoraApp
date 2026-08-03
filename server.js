@@ -23,10 +23,36 @@ const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-please-change-me';
 
 // Keep this in sync with public/js/avatars.js on the client.
-const AVATAR_IDS = [
-  'fox', 'wolf', 'bear', 'owl', 'otter', 'stag',
-  'cat', 'raven', 'frog', 'hawk', 'panda', 'turtle',
-];
+// These are "status" options chosen from the main page, not at signup.
+const AVATAR_IDS = ['boba_junky', 'horny', 'rodent', 'gnome', 'john_blue'];
+
+// ---- beer counter settings ----
+const BEER_GOAL = 50;
+const BEER_MILESTONE_STEP = 3; // small celebration every 3 beers, big one at BEER_GOAL
+const BEER_WINDOW_MS = 12 * 60 * 60 * 1000; // the counter only looks at the last 12 hours
+const BEER_RETAIN_MS = 24 * 60 * 60 * 1000; // keep a day of history on disk, prune beyond that
+
+function beerCountInWindow(events, now) {
+  const windowStart = now - BEER_WINDOW_MS;
+  const sum = events
+      .filter((e) => e.createdAt >= windowStart)
+      .reduce((total, e) => total + e.delta, 0);
+  return Math.max(0, Math.min(BEER_GOAL, sum));
+}
+
+function beerLogForClient(events, now, db) {
+  const windowStart = now - BEER_WINDOW_MS;
+  return events
+      .filter((e) => e.createdAt >= windowStart)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 50)
+      .map((e) => ({
+        username: e.username,
+        avatar: db.users[e.username] ? db.users[e.username].avatar : null,
+        delta: e.delta,
+        createdAt: e.createdAt,
+      }));
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -88,16 +114,29 @@ async function broadcastBeer() {
   io.emit('beer:update', { beerList: list });
 }
 
+function broadcastBeerCounter(extra) {
+  const db = readDb();
+  const now = Date.now();
+  const payload = Object.assign(
+      {
+        count: beerCountInWindow(db.beerCounter, now),
+        log: beerLogForClient(db.beerCounter, now, db),
+      },
+      extra
+  );
+  io.emit('beercounter:update', payload);
+}
+
 // ---------- auth routes ----------
 
 app.post('/api/signup', async (req, res) => {
-  const { username, password, confirmPassword, avatar } = req.body || {};
+  const { username, password, confirmPassword } = req.body || {};
 
   if (!username || !password || !confirmPassword) {
     return res.status(400).json({ error: 'Username and both password fields are required.' });
   }
   const cleanUsername = String(username).trim();
-  if (cleanUsername.length < 3 || cleanUsername.length > 20) {
+  if (cleanUsername.length < 3 || cleanUsername.length > 12) {
     return res.status(400).json({ error: 'Username must be 3-20 characters.' });
   }
   if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
@@ -108,9 +147,6 @@ app.post('/api/signup', async (req, res) => {
   }
   if (password !== confirmPassword) {
     return res.status(400).json({ error: 'Passwords do not match.' });
-  }
-  if (!AVATAR_IDS.includes(avatar)) {
-    return res.status(400).json({ error: 'Please choose a valid avatar icon.' });
   }
 
   const db = readDb();
@@ -124,7 +160,7 @@ app.post('/api/signup', async (req, res) => {
   db.users[cleanUsername] = {
     username: cleanUsername,
     passwordHash,
-    avatar,
+    avatar: null, // status is chosen from the main page after logging in
     createdAt: Date.now(),
     lastSeen: Date.now(),
     lat: null,
@@ -175,6 +211,20 @@ app.get('/api/me', (req, res) => {
 });
 
 app.get('/api/avatars', (req, res) => res.json({ avatars: AVATAR_IDS }));
+
+app.post('/api/status', requireAuth, async (req, res) => {
+  const { status } = req.body || {};
+  if (!AVATAR_IDS.includes(status)) {
+    return res.status(400).json({ error: 'Not a valid status.' });
+  }
+  const db = readDb();
+  const user = db.users[req.session.username];
+  if (!user) return res.status(401).json({ error: 'Not logged in.' });
+  user.avatar = status;
+  await writeDb(db);
+  res.json({ user: publicUser(user) });
+  broadcastPresence();
+});
 
 // ---------- location + markers ----------
 
@@ -253,6 +303,45 @@ app.post('/api/beer/leave', requireAuth, async (req, res) => {
   await writeDb(db);
   broadcastBeer();
   res.json({ ok: true });
+});
+
+// ---------- beer counter (rolling 12-hour mug) ----------
+
+app.get('/api/beercounter', requireAuth, (req, res) => {
+  const db = readDb();
+  const now = Date.now();
+  res.json({
+    count: beerCountInWindow(db.beerCounter, now),
+    log: beerLogForClient(db.beerCounter, now, db),
+    goal: BEER_GOAL,
+  });
+});
+
+app.post('/api/beercounter/click', requireAuth, async (req, res) => {
+  const { delta } = req.body || {};
+  if (delta !== 1 && delta !== -1) {
+    return res.status(400).json({ error: 'delta must be 1 or -1.' });
+  }
+  const db = readDb();
+  const now = Date.now();
+
+  const beforeCount = beerCountInWindow(db.beerCounter, now);
+  db.beerCounter.push({ username: req.session.username, delta, createdAt: now });
+  // Keep a day of history on disk; the 12-hour window is applied on read.
+  db.beerCounter = db.beerCounter.filter((e) => now - e.createdAt < BEER_RETAIN_MS);
+  await writeDb(db);
+
+  const afterCount = beerCountInWindow(db.beerCounter, now);
+  const celebrate = delta > 0 && beforeCount < BEER_GOAL && afterCount >= BEER_GOAL;
+  // A milestone is any multiple of BEER_MILESTONE_STEP crossed upward by this click,
+  // except the goal itself — that gets the bigger "celebrate" treatment instead.
+  const milestone =
+      !celebrate && delta > 0 && afterCount > beforeCount && afterCount % BEER_MILESTONE_STEP === 0
+          ? afterCount
+          : null;
+
+  res.json({ count: afterCount, celebrate, milestone });
+  broadcastBeerCounter({ celebrate, milestone, triggeredBy: req.session.username });
 });
 
 // ---------- chat history ----------

@@ -62,10 +62,6 @@
           <label for="signup-password2">Confirm password</label>
           <input id="signup-password2" name="password2" type="password" autocomplete="new-password" required />
         </div>
-        <div class="field">
-          <label>Pick an icon</label>
-          <div class="avatar-grid" id="avatar-grid"></div>
-        </div>
         <button class="btn-primary" type="submit">Create account</button>
       </form>
     </div>
@@ -88,11 +84,16 @@
     <div class="user-chip">
       <div class="avatar-pill" id="me-avatar"></div>
       <span class="username" id="me-username"></span>
-      <button class="btn-secondary" id="logout-btn">Log out</button>
+      <button class="btn-secondary" id="settings-btn" type="button">⚙️ <span class="settings-btn-label">Settings</span></button>
     </div>
   </header>
 
-  <main class="dashboard">
+  <div class="status-bar" id="status-bar">
+    <span class="status-bar-label">Set your status</span>
+    <div class="status-options" id="status-options"></div>
+  </div>
+
+  <main class="dashboard" id="dashboard-view">
 
     <!-- MAP -->
     <section class="card" id="map-card">
@@ -124,14 +125,28 @@
       </div>
     </section>
 
-    <!-- CLAN DASHBOARD -->
-    <section class="card" id="clan-card">
+    <!-- BEER COUNTER -->
+    <section class="card" id="counter-card">
       <div class="card-title">
-        <h3>Clan dashboard</h3>
-        <span class="eyebrow">clash royale</span>
+        <h3>Beer counter</h3>
+        <span class="eyebrow">last 12 hours</span>
       </div>
-      <div id="clan-body">
-        <div class="clan-loading">Loading clan info…</div>
+      <div class="counter-body">
+        <div class="mug-column">
+          <div class="mug-wrap" id="mug-wrap">
+            <div class="mug-count" id="mug-count">0 / 50</div>
+            <div class="mug-fill" id="mug-fill"></div>
+            <div class="mug-handle"></div>
+          </div>
+          <div class="counter-buttons">
+            <button class="counter-btn plus" id="beer-plus-btn" type="button">+ beer</button>
+            <button class="counter-btn minus" id="beer-minus-btn" type="button">− beer</button>
+          </div>
+        </div>
+        <div class="counter-log">
+          <div class="counter-log-title">Log</div>
+          <div class="counter-log-list" id="counter-log-list"></div>
+        </div>
       </div>
     </section>
 
@@ -148,8 +163,45 @@
       </form>
     </section>
 
+    <!-- CLAN DASHBOARD -->
+    <section class="card" id="clan-card">
+      <div class="card-title">
+        <h3>Clan dashboard</h3>
+        <span class="eyebrow">clash royale</span>
+      </div>
+      <div id="clan-body">
+        <div class="clan-loading">Loading clan info…</div>
+      </div>
+    </section>
+
   </main>
+
+  <main class="settings-page hidden" id="settings-view">
+    <div class="settings-card">
+      <button class="btn-secondary settings-back" id="settings-back-btn" type="button">← Back</button>
+      <h2 class="settings-title">Settings</h2>
+      <div class="settings-actions">
+        <button class="btn-secondary" id="toggle-cooldown-btn" type="button">Disable 30s beer lock</button>
+        <button class="btn-primary" id="logout-btn" type="button">Log out</button>
+      </div>
+    </div>
+  </main>
+
 </div>
+
+<div class="confirm-overlay hidden" id="confirm-overlay">
+  <div class="confirm-modal">
+    <p class="confirm-text" id="confirm-text">Are you sure?</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn no" id="confirm-no-btn" type="button">No</button>
+      <button class="confirm-btn yes" id="confirm-yes-btn" type="button">Yes</button>
+    </div>
+  </div>
+</div>
+
+<div class="confetti-overlay" id="confetti-overlay"></div>
+<div class="congrats-banner" id="congrats-banner">🎉 Congratulations! 🎉<br /><span class="congrats-sub">The mug is full — 50 beers in 12 hours.</span></div>
+<div class="milestone-banner" id="milestone-banner"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="/socket.io/socket.io.js"></script>

@@ -14,6 +14,12 @@
   let lastSentAt = 0;
   let joinedBeer = false;
 
+  const BEER_COOLDOWN_MS = 30000;
+  let cooldownEnabled = localStorage.getItem('beerCooldownDisabled') !== 'true'; // on by default
+  let lastPlusClickAt = parseInt(localStorage.getItem('beerLastPlusClickAt') || '0', 10);
+  let cooldownInterval = null;
+  let confirmYesHandler = null;
+
   // ---------------- helpers ----------------
   function $(sel) { return document.querySelector(sel); }
   function el(tag, cls) {
@@ -45,25 +51,26 @@
   }
 
   // ---------------- avatar picker (signup) ----------------
-  function renderAvatarGrid() {
-    const grid = $('#avatar-grid');
-    grid.innerHTML = '';
-    let selected = null;
-    AVATARS.forEach((a) => {
-      const btn = el('button', 'avatar-choice');
-      btn.type = 'button';
-      btn.textContent = a.emoji;
-      btn.style.background = a.bg;
-      btn.dataset.id = a.id;
-      btn.addEventListener('click', () => {
-        grid.querySelectorAll('.avatar-choice').forEach((b) => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        selected = a.id;
-        grid.dataset.selected = selected;
-      });
-      grid.appendChild(btn);
-    });
-  }
+  // Removed for icon/status update
+  // function renderAvatarGrid() {
+  //   const grid = $('#avatar-grid');
+  //   grid.innerHTML = '';
+  //   let selected = null;
+  //   AVATARS.forEach((a) => {
+  //     const btn = el('button', 'avatar-choice');
+  //     btn.type = 'button';
+  //     btn.textContent = a.emoji;
+  //     btn.style.background = a.bg;
+  //     btn.dataset.id = a.id;
+  //     btn.addEventListener('click', () => {
+  //       grid.querySelectorAll('.avatar-choice').forEach((b) => b.classList.remove('selected'));
+  //       btn.classList.add('selected');
+  //       selected = a.id;
+  //       grid.dataset.selected = selected;
+  //     });
+  //     grid.appendChild(btn);
+  //   });
+  // }
 
   // ---------------- auth view ----------------
   function showAuthError(msg) {
@@ -117,19 +124,14 @@
       const username = $('#signup-username').value.trim();
       const password = $('#signup-password').value;
       const password2 = $('#signup-password2').value;
-      const avatar = $('#avatar-grid').dataset.selected;
       if (password !== password2) {
         showAuthError('Passwords do not match.');
-        return;
-      }
-      if (!avatar) {
-        showAuthError('Pick an icon before signing up.');
         return;
       }
       try {
         const data = await api('/api/signup', {
           method: 'POST',
-          body: JSON.stringify({ username, password, confirmPassword: password2, avatar }),
+          body: JSON.stringify({ username, password, confirmPassword: password2 }),
         });
         enterApp(data.user);
       } catch (err) {
@@ -158,11 +160,52 @@
     initSocket();
     startGeolocation();
     wireBeerButton();
-    // Deleted Pin drop code:
-    //wireMarkerForm();
     wireChatForm();
+    wireStatusBar();
+    wireCounterButtons();
+    wireConfirmModal();
+    wireSettingsNav();
+    wireSettingsToggle();
+    startCooldownWatch();
 
-    await Promise.all([loadLocations(), loadMarkers(), loadBeer(), loadChatHistory(), loadClan()]);
+    await Promise.all([loadLocations(), loadMarkers(), loadBeer(), loadBeerCounter(), loadChatHistory(), loadClan()]);
+  }
+
+  // ---------------- status bar ----------------
+  function wireStatusBar() {
+    const container = $('#status-options');
+    if (!container) return;
+    container.innerHTML = '';
+
+    AVATARS.forEach((status) => {
+      const btn = el('button', 'status-btn' + (me && me.avatar === status.id ? ' selected' : ''));
+      btn.type = 'button';
+      btn.dataset.status = status.id;
+
+      const circle = el('div', 'status-emoji');
+      circle.style.setProperty('--status-bg', status.bg);
+      circle.textContent = status.emoji;
+
+      const label = el('span', 'status-text');
+      label.textContent = status.label;
+
+      btn.appendChild(circle);
+      btn.appendChild(label);
+
+      btn.addEventListener('click', async () => {
+        try {
+          const data = await api('/api/status', { method: 'POST', body: JSON.stringify({ status: status.id }) });
+          me = data.user;
+          avatarPill($('#me-avatar'), me.avatar);
+          container.querySelectorAll('.status-btn').forEach((b) => b.classList.remove('selected'));
+          btn.classList.add('selected');
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+
+      container.appendChild(btn);
+    });
   }
 
   $('#logout-btn') && $('#logout-btn').addEventListener('click', async () => {
@@ -170,14 +213,6 @@
     window.location.reload();
   });
 
-  // ---------------- map ----------------
-  // function initMap() {
-  //   map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
-  //   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  //     maxZoom: 19,
-  //     attribution: '&copy; OpenStreetMap contributors',
-  //   }).addTo(map);
-  // }
   function initMap() {
     map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
@@ -400,6 +435,225 @@
     });
   }
 
+  // ---------------- beer counter (12-hour mug) ----------------
+  const BEER_GOAL = 50;
+
+  function renderMug(count) {
+    const pct = Math.max(0, Math.min(100, (count / BEER_GOAL) * 100));
+    const fill = $('#mug-fill');
+    if (fill) fill.style.height = pct + '%';
+    const label = $('#mug-count');
+    if (label) label.textContent = `${count} / ${BEER_GOAL}`;
+  }
+
+  function renderCounterLog(log) {
+    const list = $('#counter-log-list');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!log.length) {
+      const empty = el('div', 'counter-log-empty');
+      empty.textContent = 'No clicks in the last 12 hours yet.';
+      list.appendChild(empty);
+      return;
+    }
+    log.forEach((entry) => {
+      const row = el('div', 'counter-log-row');
+      const pill = el('div', 'avatar-pill');
+      avatarPill(pill, entry.avatar);
+      const name = el('span');
+      name.textContent = entry.username;
+      const delta = el('span', 'delta ' + (entry.delta > 0 ? 'plus' : 'minus'));
+      delta.textContent = entry.delta > 0 ? '+1' : '−1';
+      const time = el('span', 'time');
+      time.textContent = timeAgo(entry.createdAt);
+      row.appendChild(pill);
+      row.appendChild(name);
+      row.appendChild(delta);
+      row.appendChild(time);
+      list.appendChild(row);
+    });
+  }
+
+  function renderBeerCounter(data) {
+    renderMug(data.count);
+    renderCounterLog(data.log);
+    if (data.celebrate) celebrate();
+    else if (data.milestone) celebrateMilestone(data.milestone);
+  }
+
+  async function loadBeerCounter() {
+    const data = await api('/api/beercounter');
+    renderMug(data.count);
+    renderCounterLog(data.log);
+  }
+
+  function remainingCooldownMs() {
+    if (!cooldownEnabled) return 0;
+    return Math.max(0, BEER_COOLDOWN_MS - (Date.now() - lastPlusClickAt));
+  }
+
+  function updatePlusButtonState() {
+    const btn = $('#beer-plus-btn');
+    if (!btn) return;
+    const remaining = remainingCooldownMs();
+    if (remaining > 0) {
+      btn.disabled = true;
+      btn.textContent = `Wait ${Math.ceil(remaining / 1000)}s`;
+    } else {
+      btn.disabled = false;
+      btn.textContent = '+ beer';
+      if (cooldownInterval) {
+        clearInterval(cooldownInterval);
+        cooldownInterval = null;
+      }
+    }
+  }
+
+  function startCooldownWatch() {
+    updatePlusButtonState();
+    if (remainingCooldownMs() > 0 && !cooldownInterval) {
+      cooldownInterval = setInterval(updatePlusButtonState, 1000);
+    }
+  }
+
+  function wireCounterButtons() {
+    $('#beer-plus-btn').addEventListener('click', () => {
+      if (remainingCooldownMs() > 0) return; // button should already be disabled; this is just a safety net
+      lastPlusClickAt = Date.now();
+      localStorage.setItem('beerLastPlusClickAt', String(lastPlusClickAt));
+      sendBeerClick(1);
+      startCooldownWatch();
+    });
+    $('#beer-minus-btn').addEventListener('click', () => {
+      openConfirmModal('Are you sure? You worked so hard...', () => sendBeerClick(-1));
+    });
+  }
+
+  // ---------------- confirm modal ----------------
+  function openConfirmModal(message, onYes) {
+    const overlay = $('#confirm-overlay');
+    const text = $('#confirm-text');
+    if (!overlay || !text) return;
+    text.textContent = message;
+    confirmYesHandler = onYes;
+    overlay.classList.remove('hidden');
+  }
+
+  function closeConfirmModal() {
+    const overlay = $('#confirm-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    confirmYesHandler = null;
+  }
+
+  function wireConfirmModal() {
+    $('#confirm-yes-btn').addEventListener('click', () => {
+      const handler = confirmYesHandler;
+      closeConfirmModal();
+      if (handler) handler();
+    });
+    $('#confirm-no-btn').addEventListener('click', () => closeConfirmModal());
+    $('#confirm-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'confirm-overlay') closeConfirmModal();
+    });
+  }
+
+  // ---------------- settings ----------------
+  function wireSettingsNav() {
+    $('#settings-btn').addEventListener('click', () => {
+      $('#dashboard-view').classList.add('hidden');
+      $('#settings-view').classList.remove('hidden');
+    });
+    $('#settings-back-btn').addEventListener('click', () => {
+      $('#settings-view').classList.add('hidden');
+      $('#dashboard-view').classList.remove('hidden');
+    });
+  }
+
+  function updateCooldownToggleLabel() {
+    const btn = $('#toggle-cooldown-btn');
+    if (!btn) return;
+    btn.textContent = cooldownEnabled ? 'Disable 30s beer lock' : 'Enable 30s beer lock';
+  }
+
+  function wireSettingsToggle() {
+    updateCooldownToggleLabel();
+    $('#toggle-cooldown-btn').addEventListener('click', () => {
+      cooldownEnabled = !cooldownEnabled;
+      localStorage.setItem('beerCooldownDisabled', cooldownEnabled ? 'false' : 'true');
+      updateCooldownToggleLabel();
+      updatePlusButtonState();
+    });
+  }
+
+  async function sendBeerClick(delta) {
+    try {
+      await api('/api/beercounter/click', { method: 'POST', body: JSON.stringify({ delta }) });
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  function celebrate() {
+    const overlay = $('#confetti-overlay');
+    const banner = $('#congrats-banner');
+    if (!overlay || !banner) return;
+
+    const colors = ['#f0b94f', '#d99a3f', '#7a9d6b', '#e5b3a9', '#f1e6d2', '#b1503f'];
+    const pieceCount = 90;
+    for (let i = 0; i < pieceCount; i++) {
+      const piece = el('div', 'confetti-piece');
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDuration = 2.2 + Math.random() * 1.6 + 's';
+      piece.style.animationDelay = Math.random() * 0.6 + 's';
+      piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+      overlay.appendChild(piece);
+    }
+
+    banner.classList.add('show');
+    setTimeout(() => {
+      banner.classList.remove('show');
+    }, 4000);
+    setTimeout(() => {
+      overlay.innerHTML = '';
+    }, 4200);
+  }
+
+  const MILESTONE_MESSAGES = [
+    'Just a Few More... 🍻',
+    "Nice pace! 🍺",
+    'Youre almost there... 🍻',
+    'Lets get Sendy! 🍺',
+    'Crew\'s thirsty! 🍺',
+  ];
+
+  function celebrateMilestone(count) {
+    const overlay = $('#confetti-overlay');
+    const banner = $('#milestone-banner');
+    if (!overlay || !banner) return;
+
+    const pieceCount = 36;
+    for (let i = 0; i < pieceCount; i++) {
+      const piece = el('div', 'emoji-piece');
+      piece.textContent = '🍺';
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.fontSize = 18 + Math.random() * 16 + 'px';
+      piece.style.animationDuration = 1.5 + Math.random() * 1.1 + 's';
+      piece.style.animationDelay = Math.random() * 0.4 + 's';
+      overlay.appendChild(piece);
+    }
+
+    const msg = MILESTONE_MESSAGES[Math.floor(Math.random() * MILESTONE_MESSAGES.length)];
+    banner.textContent = `${count} beers in! ${msg}`;
+    banner.classList.add('show');
+    setTimeout(() => {
+      banner.classList.remove('show');
+    }, 8000);
+    setTimeout(() => {
+      overlay.innerHTML = '';
+    }, 8000);
+  }
+
   // ---------------- chat ----------------
   function appendChatMessage(msg) {
     const wrap = $('#chat-messages');
@@ -520,12 +774,12 @@
     socket.on('presence:update', (data) => renderUsers(data.users));
     socket.on('markers:update', (data) => renderMarkers(data.markers));
     socket.on('beer:update', (data) => renderBeer(data.beerList));
+    socket.on('beercounter:update', (data) => renderBeerCounter(data));
     socket.on('chat:message', (msg) => appendChatMessage(msg));
   }
 
   // ---------------- boot ----------------
   async function boot() {
-    renderAvatarGrid();
     wireAuthTabs();
     wireAuthForms();
     wireGifBadges();

@@ -1,21 +1,15 @@
 // avatars.js
-// Preset icon choices shown at signup. Kept intentionally simple (emoji-based)
-// so the app has zero dependency on file uploads or external image hosting.
-// IDs here must match AVATAR_IDS in server.js.
+// Status options chosen from the main page (not at signup). Kept
+// intentionally simple (emoji-based) so the app has zero dependency on
+// file uploads or external image hosting. IDs here must match AVATAR_IDS
+// in server.js.
 
 const AVATARS = [
-  { id: 'fox', emoji: '🦊', bg: '#c9642f' },
-  { id: 'wolf', emoji: '🐺', bg: '#5b6472' },
-  { id: 'bear', emoji: '🐻', bg: '#7a5233' },
-  { id: 'owl', emoji: '🦉', bg: '#6b5b3e' },
-  { id: 'otter', emoji: '🦦', bg: '#8a6b4a' },
-  { id: 'stag', emoji: '🦌', bg: '#7a4a2e' },
-  { id: 'cat', emoji: '🐱', bg: '#a85f4d' },
-  { id: 'raven', emoji: '🐦', bg: '#3d3630' },
-  { id: 'frog', emoji: '🐸', bg: '#5e7a4a' },
-  { id: 'hawk', emoji: '🦅', bg: '#6e4a33' },
-  { id: 'panda', emoji: '🐼', bg: '#403830' },
-  { id: 'turtle', emoji: '🐢', bg: '#4a6e52' },
+  { id: 'boba_junky', label: 'Boba Junky', emoji: '😈', bg: '#9b0cb8' },
+  { id: 'horny', label: 'Horny', emoji: '🤤', bg: '#eab308' },
+  { id: 'rodent', label: 'Rodent', emoji: '🐿️', bg: '#9d5b10' },
+  { id: 'gnome', label: 'Gnome', emoji: '🧙🏽', bg: '#3a9d10' },
+  { id: 'john_blue', label: 'John Blue', emoji: '👨🏻‍🎤', bg: '#0786d5' },
 ];
 
 function avatarById(id) {

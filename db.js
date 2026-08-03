@@ -19,6 +19,9 @@ const DEFAULT_DB = {
   ],
   chat: [
     // { username, avatar, text, createdAt }
+  ],
+  beerCounter: [
+    // { username, delta, createdAt }  -- +1/-1 clicks feeding the 12-hour mug counter
   ]
 };
 
@@ -34,7 +37,18 @@ function readDb() {
   ensureDb();
   const raw = fs.readFileSync(DB_PATH, 'utf-8');
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Backfill any top-level keys added in newer versions (e.g. beerCounter)
+    // so existing data/db.json files upgrade automatically instead of crashing.
+    let changed = false;
+    Object.keys(DEFAULT_DB).forEach((key) => {
+      if (!(key in parsed)) {
+        parsed[key] = JSON.parse(JSON.stringify(DEFAULT_DB[key]));
+        changed = true;
+      }
+    });
+    if (changed) fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2));
+    return parsed;
   } catch (e) {
     console.error('db.json was corrupt, resetting to defaults', e);
     fs.writeFileSync(DB_PATH, JSON.stringify(DEFAULT_DB, null, 2));
