@@ -499,14 +499,18 @@
   // Drop an mp3 at public/assets/sounds/beer.mp3 to set the sound. If it's
   // missing or blocked, we synthesise a clink so there's always feedback.
 
-  const BEER_SOUND_URL = '/assets/sounds/beer.mp3';
+  // Set from /api/config — whatever audio file the server found in
+  // public/assets/sounds. Empty means "no file, use the synth".
+  let beerSoundUrl = '';
   let beerAudio = null;
   let audioCtx = null;
   let soundEnabled = localStorage.getItem('beerSoundDisabled') !== 'true';
 
   function getBeerAudio() {
-    if (!beerAudio) {
-      beerAudio = new Audio(BEER_SOUND_URL);
+    if (!beerSoundUrl) return null;
+    if (!beerAudio || beerAudio.dataset_src !== beerSoundUrl) {
+      beerAudio = new Audio(beerSoundUrl);
+      beerAudio.dataset_src = beerSoundUrl;
       beerAudio.preload = 'auto';
     }
     return beerAudio;
@@ -541,6 +545,7 @@
   function playBeerSound() {
     if (!soundEnabled) return;
     const audio = getBeerAudio();
+    if (!audio) { synthClink(); return; }
     try {
       audio.currentTime = 0;
       const played = audio.play();
@@ -771,8 +776,13 @@
     if (btn) btn.textContent = soundEnabled ? 'Mute beer sound' : 'Unmute beer sound';
   }
 
-  function wireSoundControls() {
+  async function wireSoundControls() {
     updateSoundToggleLabel();
+
+    const cfg = await getConfig();
+    beerSoundUrl = cfg.beerSoundUrl || '';
+    if (beerSoundUrl) getBeerAudio();  // warm the cache so the first beer is instant
+    console.log('[sound] alert sound:', beerSoundUrl || '(synthesised clink)');
 
     const toggle = $('#toggle-sound-btn');
     if (toggle) {

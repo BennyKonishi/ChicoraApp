@@ -9,6 +9,7 @@
 
 require('dotenv').config();
 
+const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const express = require('express');
@@ -22,6 +23,26 @@ const webpush = require('web-push');
 
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-please-change-me';
+
+// ---- beer alert sound ----
+// Whatever audio file sits in public/assets/sounds is the alert sound, so
+// dropping in "PG_Laugh.mp3" works without renaming it to something specific.
+function findBeerSound() {
+  try {
+    const dir = path.join(__dirname, 'public', 'assets', 'sounds');
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => /\.(mp3|m4a|aac|ogg|wav)$/i.test(f))
+      .sort();
+    // A file literally named beer.* wins if several are present.
+    const preferred = files.find((f) => /^beer\./i.test(f)) || files[0];
+    return preferred ? `/assets/sounds/${encodeURIComponent(preferred)}` : '';
+  } catch (e) {
+    return '';
+  }
+}
+const BEER_SOUND_URL = findBeerSound();
+console.log(BEER_SOUND_URL ? `[sound] alert sound: ${BEER_SOUND_URL}` : '[sound] no audio file in public/assets/sounds — using the synthesised clink');
 
 // ---- push notifications ----
 // Browsers hold a subscription tied to this VAPID key pair. Rotating the keys
@@ -252,7 +273,12 @@ app.get('/api/avatars', (req, res) => res.json({ avatars: AVATAR_IDS }));
 // Front-end config. The CARTO key is a browser-side basemap key (it ends up in
 // tile URLs either way), so serving it here just keeps it out of the source.
 app.get('/api/config', (req, res) => {
-  res.json({ cartoApiKey: process.env.CARTO_API_KEY || '', vapidPublicKey: VAPID_PUBLIC_KEY });
+  res.json({
+    cartoApiKey: process.env.CARTO_API_KEY || '',
+    vapidPublicKey: VAPID_PUBLIC_KEY,
+    pushEnabled,
+    beerSoundUrl: BEER_SOUND_URL,
+  });
 });
 
 app.post('/api/status', requireAuth, async (req, res) => {
