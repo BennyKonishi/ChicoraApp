@@ -13,6 +13,7 @@
   let lastKnownPos = null;     // { lat, lng }
   let lastSentAt = 0;
   let joinedBeer = false;
+  let lastRenderedBeerCount = null;   // so we only chime on an increase
 
   const BEER_COOLDOWN_MS = 30000;
   let cooldownEnabled = localStorage.getItem('beerCooldownDisabled') !== 'true'; // on by default
@@ -166,6 +167,8 @@
     wireConfirmModal();
     wireSettingsNav();
     wireSettingsToggle();
+    wirePushToggle();
+    wireSoundControls();
     startCooldownWatch();
 
     await Promise.all([loadLocations(), loadMarkers(), loadBeer(), loadBeerCounter(), loadChatHistory(), loadClan()]);
@@ -213,19 +216,21 @@
     window.location.reload();
   });
 
+  // Server-provided public config (CARTO key, VAPID key). Fetched once.
+  let configPromise = null;
+  function getConfig() {
+    if (!configPromise) configPromise = api('/api/config').catch(() => ({}));
+    return configPromise;
+  }
+
   async function initMap() {
     map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
 
     // CARTO basemaps require an API key as of 2026 — without one the tiles come
     // back stamped with an "API KEY REQUIRED" watermark. Free key (5M tiles/mo):
     // https://carto.com/basemaps/apikey  -> put it in .env as CARTO_API_KEY
-    let cartoApiKey = '';
-    try {
-      const cfg = await api('/api/config');
-      cartoApiKey = cfg.cartoApiKey || '';
-    } catch (e) {
-      // Non-fatal: the map still draws, just watermarked.
-    }
+    const cfg = await getConfig();
+    const cartoApiKey = cfg.cartoApiKey || '';
     if (!cartoApiKey) {
       console.warn('No CARTO_API_KEY set — basemap tiles will be watermarked. See .env.example.');
     }
@@ -490,17 +495,96 @@
     });
   }
 
+  // ---------------- beer alert: sound + vibration ----------------
+  // Drop an mp3 at public/assets/sounds/beer.mp3 to set the sound. If it's
+  // missing or blocked, we synthesise a clink so there's always feedback.
+
+  const BEER_SOUND_URL = '/assets/sounds/beer.mp3';
+  let beerAudio = null;
+  let audioCtx = null;
+  let soundEnabled = localStorage.getItem('beerSoundDisabled') !== 'true';
+
+  function getBeerAudio() {
+    if (!beerAudio) {
+      beerAudio = new Audio(BEER_SOUND_URL);
+      beerAudio.preload = 'auto';
+    }
+    return beerAudio;
+  }
+
+  // Fallback: two short decaying tones, roughly a glass clink.
+  function synthClink() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      [0, 0.09].forEach((offset, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const t = audioCtx.currentTime + offset;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(i === 0 ? 880 : 1320, t);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.4);
+      });
+    } catch (e) {
+      // No audio available — silent is fine, the confetti still fires.
+    }
+  }
+
+  function playBeerSound() {
+    if (!soundEnabled) return;
+    const audio = getBeerAudio();
+    try {
+      audio.currentTime = 0;
+      const played = audio.play();
+      // play() rejects if the file is missing or autoplay is blocked.
+      if (played && typeof played.catch === 'function') played.catch(() => synthClink());
+    } catch (e) {
+      synthClink();
+    }
+  }
+
+  function buzz() {
+    // Android honours this; iOS Safari ignores it entirely.
+    if (navigator.vibrate) {
+      try { navigator.vibrate([90, 50, 90]); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function beerAlert() {
+    playBeerSound();
+    buzz();
+  }
+
   function renderBeerCounter(data) {
+    const previous = lastRenderedBeerCount;
     renderMug(data.count);
     renderCounterLog(data.log);
+
+    // Sound + buzz only when someone ELSE adds a beer. `triggeredBy` is absent
+    // on the initial load, so a refresh never makes noise.
+    const someoneElse = data.triggeredBy && me && data.triggeredBy !== me.username;
+    const wentUp = previous === null || data.count > previous;
+    if (someoneElse && wentUp) beerAlert();
+
+    lastRenderedBeerCount = data.count;
+
     if (data.celebrate) celebrate();
     else if (data.milestone) celebrateMilestone(data.milestone);
   }
 
   async function loadBeerCounter() {
     const data = await api('/api/beercounter');
-    renderMug(data.count);
-    renderCounterLog(data.log);
+    // Goes through renderBeerCounter so the "last seen count" is primed on load.
+    // No triggeredBy on this payload, so it stays silent.
+    renderBeerCounter(data);
   }
 
   function remainingCooldownMs() {
@@ -589,6 +673,169 @@
     const btn = $('#toggle-cooldown-btn');
     if (!btn) return;
     btn.textContent = cooldownEnabled ? 'Disable 30s beer lock' : 'Enable 30s beer lock';
+  }
+
+  // ---------------- push notifications ----------------
+
+  let pushRegistration = null;
+
+  function pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  }
+
+  function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  }
+
+  function isInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  }
+
+  function showPushNote(html) {
+    const note = $('#push-note');
+    if (!note) return;
+    if (!html) { note.classList.add('hidden'); return; }
+    note.innerHTML = html;
+    note.classList.remove('hidden');
+  }
+
+  // The VAPID public key travels as base64url; PushManager wants raw bytes.
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = window.atob(base64);
+    const output = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i);
+    return output;
+  }
+
+  async function currentSubscription() {
+    if (!pushRegistration) return null;
+    return pushRegistration.pushManager.getSubscription();
+  }
+
+  async function updatePushButton() {
+    const btn = $('#toggle-push-btn');
+    if (!btn) return;
+    const sub = await currentSubscription();
+    btn.textContent = sub ? 'Turn off beer alerts' : 'Turn on beer alerts';
+    btn.dataset.on = sub ? 'true' : 'false';
+  }
+
+  async function enablePush() {
+    const cfg = await getConfig();
+    if (!cfg.vapidPublicKey) {
+      showPushNote('Notifications are not configured on the server yet.');
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      showPushNote(
+        permission === 'denied'
+          ? 'Notifications are blocked for this site. Turn them back on in your browser settings, then try again.'
+          : 'Notifications need permission to work.'
+      );
+      return;
+    }
+
+    const sub = await pushRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(cfg.vapidPublicKey),
+    });
+
+    await api('/api/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ subscription: sub.toJSON() }),
+    });
+
+    showPushNote("You'll get a buzz every time someone else cracks one. 🍺");
+    await updatePushButton();
+  }
+
+  async function disablePush() {
+    const sub = await currentSubscription();
+    if (sub) {
+      await api('/api/push/unsubscribe', {
+        method: 'POST',
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      }).catch(() => {});
+      await sub.unsubscribe();
+    }
+    showPushNote('Beer alerts are off.');
+    await updatePushButton();
+  }
+
+  function updateSoundToggleLabel() {
+    const btn = $('#toggle-sound-btn');
+    if (btn) btn.textContent = soundEnabled ? 'Mute beer sound' : 'Unmute beer sound';
+  }
+
+  function wireSoundControls() {
+    updateSoundToggleLabel();
+
+    const toggle = $('#toggle-sound-btn');
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        localStorage.setItem('beerSoundDisabled', soundEnabled ? 'false' : 'true');
+        updateSoundToggleLabel();
+        if (soundEnabled) beerAlert();
+      });
+    }
+
+    const test = $('#test-alert-btn');
+    if (test) {
+      test.addEventListener('click', () => {
+        // Ignores the mute setting on purpose — this button exists to check the file.
+        const was = soundEnabled;
+        soundEnabled = true;
+        beerAlert();
+        soundEnabled = was;
+      });
+    }
+  }
+
+  async function wirePushToggle() {
+    const btn = $('#toggle-push-btn');
+    if (!btn) return;
+
+    if (!pushSupported()) {
+      btn.classList.add('hidden');
+      // On iPhone, push only exists once the site is added to the Home Screen.
+      if (isIOS() && !isInstalled()) {
+        showPushNote(
+          'To get beer alerts on iPhone: tap <strong>Share</strong>, then ' +
+          '<strong>Add to Home Screen</strong>, and open the app from that icon.'
+        );
+      } else {
+        showPushNote('This browser does not support notifications.');
+      }
+      return;
+    }
+
+    try {
+      pushRegistration = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+    } catch (e) {
+      btn.classList.add('hidden');
+      showPushNote('Could not start notifications (service worker failed to register).');
+      return;
+    }
+
+    await updatePushButton();
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        if (btn.dataset.on === 'true') await disablePush();
+        else await enablePush();
+      } catch (e) {
+        showPushNote('Something went wrong turning alerts ' + (btn.dataset.on === 'true' ? 'off' : 'on') + '.');
+      } finally {
+        btn.disabled = false;
+      }
+    });
   }
 
   function wireSettingsToggle() {

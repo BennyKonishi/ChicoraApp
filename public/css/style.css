@@ -1149,3 +1149,17 @@ button {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---- push notification note (settings) ---- */
+.settings-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  background: var(--panel-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.settings-note.hidden { display: none; }
+.settings-note strong { color: var(--text); font-weight: 600; }

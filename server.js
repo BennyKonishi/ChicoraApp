@@ -18,9 +18,27 @@ const { Server } = require('socket.io');
 
 const { initDb, readDb, writeDb, flushNow } = require('./db');
 const { getClanInfo } = require('./clashroyale');
+const webpush = require('web-push');
 
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-please-change-me';
+
+// ---- push notifications ----
+// Browsers hold a subscription tied to this VAPID key pair. Rotating the keys
+// invalidates every existing subscription, so treat them as permanent.
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const pushEnabled = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
+
+if (pushEnabled) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || 'mailto:admin@example.com',
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY
+  );
+} else {
+  console.warn('[push] VAPID keys not set — notifications are disabled.');
+}
 
 // Keep this in sync with public/js/avatars.js on the client.
 // These are "status" options chosen from the main page, not at signup.
@@ -234,7 +252,7 @@ app.get('/api/avatars', (req, res) => res.json({ avatars: AVATAR_IDS }));
 // Front-end config. The CARTO key is a browser-side basemap key (it ends up in
 // tile URLs either way), so serving it here just keeps it out of the source.
 app.get('/api/config', (req, res) => {
-  res.json({ cartoApiKey: process.env.CARTO_API_KEY || '' });
+  res.json({ cartoApiKey: process.env.CARTO_API_KEY || '', vapidPublicKey: VAPID_PUBLIC_KEY });
 });
 
 app.post('/api/status', requireAuth, async (req, res) => {
@@ -332,6 +350,73 @@ app.post('/api/beer/leave', requireAuth, async (req, res) => {
 
 // ---------- beer counter (rolling 12-hour mug) ----------
 
+// ---------- push notifications ----------
+
+app.post('/api/push/subscribe', requireAuth, async (req, res) => {
+  const sub = req.body && req.body.subscription;
+  if (!sub || !sub.endpoint) return res.status(400).json({ error: 'Missing subscription.' });
+
+  const db = readDb();
+  if (!db.pushSubscriptions) db.pushSubscriptions = {};
+  // Keyed by endpoint, so re-subscribing the same browser updates in place
+  // instead of piling up duplicates.
+  db.pushSubscriptions[sub.endpoint] = {
+    endpoint: sub.endpoint,
+    username: req.session.username,
+    subscription: sub,
+    createdAt: Date.now(),
+  };
+  await writeDb(db);
+  res.json({ ok: true });
+});
+
+app.post('/api/push/unsubscribe', requireAuth, async (req, res) => {
+  const endpoint = req.body && req.body.endpoint;
+  if (!endpoint) return res.status(400).json({ error: 'Missing endpoint.' });
+
+  const db = readDb();
+  if (db.pushSubscriptions && db.pushSubscriptions[endpoint]) {
+    delete db.pushSubscriptions[endpoint];
+    await writeDb(db);
+  }
+  res.json({ ok: true });
+});
+
+// Fan a beer out to everyone except whoever clicked — they already saw the
+// confetti. Dead subscriptions (uninstalled apps, revoked permission) answer
+// 404/410 and are pruned so the list doesn't rot.
+async function sendBeerPush({ actor, count }) {
+  if (!pushEnabled) return;
+
+  const db = readDb();
+  const targets = Object.values(db.pushSubscriptions || {}).filter((s) => s.username !== actor);
+  if (!targets.length) return;
+
+  const payload = JSON.stringify({
+    title: `${actor} cracked one 🍺`,
+    body: `${count}/${BEER_GOAL} beers in the last 12 hours.`,
+    tag: 'beer-counter',
+    url: '/',
+  });
+
+  const dead = [];
+  await Promise.all(
+    targets.map((target) =>
+      webpush.sendNotification(target.subscription, payload).catch((err) => {
+        if (err.statusCode === 404 || err.statusCode === 410) dead.push(target.endpoint);
+        else console.error('[push] send failed', err.statusCode || err.message);
+      })
+    )
+  );
+
+  if (dead.length) {
+    const fresh = readDb();
+    dead.forEach((endpoint) => delete fresh.pushSubscriptions[endpoint]);
+    await writeDb(fresh);
+    console.log(`[push] pruned ${dead.length} dead subscription(s)`);
+  }
+}
+
 app.get('/api/beercounter', requireAuth, (req, res) => {
   const db = readDb();
   const now = Date.now();
@@ -367,6 +452,14 @@ app.post('/api/beercounter/click', requireAuth, async (req, res) => {
 
   res.json({ count: afterCount, celebrate, milestone });
   broadcastBeerCounter({ celebrate, milestone, triggeredBy: req.session.username });
+
+  // Only on the way up, and never awaited — a slow push service must not hold
+  // up the response to the person who tapped.
+  if (delta > 0) {
+    sendBeerPush({ actor: req.session.username, count: afterCount }).catch((err) =>
+      console.error('[push] fan-out failed', err)
+    );
+  }
 });
 
 // ---------- chat history ----------

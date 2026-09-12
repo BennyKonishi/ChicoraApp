@@ -33,7 +33,10 @@ const DEFAULT_DB = {
   ],
   beerCounter: [
     // { username, delta, createdAt }  -- +1/-1 clicks feeding the 12-hour mug counter
-  ]
+  ],
+  pushSubscriptions: {
+    // endpoint: { endpoint, username, subscription, createdAt }  -- Web Push targets
+  }
 };
 
 let cache = null;        // the whole document, in memory

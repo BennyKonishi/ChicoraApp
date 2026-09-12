@@ -20,6 +20,23 @@ for the map. Nothing here needs a build step.
 | Group chat | Real-time chat over Socket.IO, with the last 100 messages persisted |
 | Clan dashboard | Server-side call to the official Clash Royale API for a clan (defaults to "Chicora Goblins") |
 
+## Beer alerts
+
+Every time someone else adds a beer, the crew gets three things:
+
+| | App open | App closed |
+|---|---|---|
+| Custom mp3 | yes | no — the OS uses its own notification tone |
+| Vibration | Android | Android; iOS follows its own settings |
+| Notification | yes | yes (Web Push) |
+
+**The sound** is `public/assets/sounds/beer.mp3`. Drop any short mp3 there and
+redeploy — that's the whole setup. No file? The app synthesises a clink instead,
+so it never fails silently. Mute and test buttons live in Settings.
+
+No website can choose the sound a closed-app notification makes; that's an OS
+rule, not a missing feature.
+
 ## 1. Run it locally
 
 You need [Node.js](https://nodejs.org) 18 or newer.

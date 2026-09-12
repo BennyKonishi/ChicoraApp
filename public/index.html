@@ -10,6 +10,14 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <link rel="stylesheet" href="/css/style.css" />
+
+<!-- Installable app + push notifications -->
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#3a2412" />
+<link rel="apple-touch-icon" href="/assets/icons/icon-180.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="6ix Glazer" />
 </head>
 <body>
 
@@ -182,6 +190,10 @@
       <h2 class="settings-title">Settings</h2>
       <div class="settings-actions">
         <button class="btn-secondary" id="toggle-cooldown-btn" type="button">Disable 30s beer lock</button>
+        <button class="btn-secondary" id="toggle-push-btn" type="button">Turn on beer alerts</button>
+        <button class="btn-secondary" id="toggle-sound-btn" type="button">Mute beer sound</button>
+        <button class="btn-secondary" id="test-alert-btn" type="button">🔊 Test beer alert</button>
+        <p class="settings-note hidden" id="push-note"></p>
         <button class="btn-primary" id="logout-btn" type="button">Log out</button>
       </div>
     </div>
