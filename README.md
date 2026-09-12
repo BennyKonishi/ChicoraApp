@@ -89,6 +89,25 @@ like this one:
    send that to your friends. (Free tier sleeps after inactivity, so the first
    load after a while takes ~30s to wake up.)
 
+**Set `DATABASE_URL` or your data will disappear.** Render's filesystem is
+ephemeral: `data/db.json` is wiped on every redeploy, restart and wake-from-sleep,
+taking accounts, chat, pins and the beer counter with it. With `DATABASE_URL` set,
+the app keeps the same document in Postgres instead (and stores logins there too,
+so a restart no longer signs everyone out).
+
+Any Postgres works. Don't use Render's own free database — it is deleted 30 days
+after creation. [Neon](https://neon.com)'s free tier doesn't expire:
+
+1. Create a project at https://neon.com → copy the connection string.
+2. Paste it into `.env` locally, and add it under **Environment** on Render as
+   `DATABASE_URL`.
+3. Restart. The log should say `[db] loaded from Postgres`. On the very first
+   boot it says `initialised Postgres (seeded from data/db.json)` — whatever was
+   in the JSON file at that moment is carried over, so nothing is lost.
+
+With no `DATABASE_URL` the app falls back to `data/db.json`, which is what you
+want for local development.
+
 ### Railway
 Same idea: connect the GitHub repo, add the environment variables from `.env`,
 Railway detects the Node app and runs `npm start` automatically.

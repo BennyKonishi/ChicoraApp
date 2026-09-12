@@ -213,9 +213,25 @@
     window.location.reload();
   });
 
-  function initMap() {
+  async function initMap() {
     map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+
+    // CARTO basemaps require an API key as of 2026 — without one the tiles come
+    // back stamped with an "API KEY REQUIRED" watermark. Free key (5M tiles/mo):
+    // https://carto.com/basemaps/apikey  -> put it in .env as CARTO_API_KEY
+    let cartoApiKey = '';
+    try {
+      const cfg = await api('/api/config');
+      cartoApiKey = cfg.cartoApiKey || '';
+    } catch (e) {
+      // Non-fatal: the map still draws, just watermarked.
+    }
+    if (!cartoApiKey) {
+      console.warn('No CARTO_API_KEY set — basemap tiles will be watermarked. See .env.example.');
+    }
+
+    const keyParam = cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : '';
+    L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png${keyParam}`, {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     }).addTo(map);

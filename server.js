@@ -16,7 +16,7 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { Server } = require('socket.io');
 
-const { readDb, writeDb } = require('./db');
+const { initDb, readDb, writeDb, flushNow } = require('./db');
 const { getClanInfo } = require('./clashroyale');
 
 const PORT = process.env.PORT || 3000;
@@ -61,7 +61,10 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const sessionMiddleware = session({
+// Sessions. With no store, express-session keeps them in memory, so every
+// restart (and every Render spin-down) logs everybody out. When DATABASE_URL is
+// set we park them in the same Postgres instead, so logins survive a restart.
+const sessionOptions = {
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -69,7 +72,23 @@ const sessionMiddleware = session({
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     sameSite: 'lax',
   },
-});
+};
+
+if (process.env.DATABASE_URL) {
+  const PgSession = require('connect-pg-simple')(session);
+  const isLocalDb = /@(localhost|127\.0\.0\.1)/.test(process.env.DATABASE_URL);
+  sessionOptions.store = new PgSession({
+    conObject: {
+      connectionString: process.env.DATABASE_URL,
+      ssl: isLocalDb ? false : { rejectUnauthorized: false },
+      max: 2,
+    },
+    tableName: 'session',
+    createTableIfMissing: true,
+  });
+}
+
+const sessionMiddleware = session(sessionOptions);
 app.use(sessionMiddleware);
 
 // Share the session with Socket.IO so sockets know who's logged in.
@@ -211,6 +230,12 @@ app.get('/api/me', (req, res) => {
 });
 
 app.get('/api/avatars', (req, res) => res.json({ avatars: AVATAR_IDS }));
+
+// Front-end config. The CARTO key is a browser-side basemap key (it ends up in
+// tile URLs either way), so serving it here just keeps it out of the source.
+app.get('/api/config', (req, res) => {
+  res.json({ cartoApiKey: process.env.CARTO_API_KEY || '' });
+});
 
 app.post('/api/status', requireAuth, async (req, res) => {
   const { status } = req.body || {};
@@ -396,6 +421,22 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`The Muster is running at http://localhost:${PORT}`);
+// Render terminates the old instance on deploy; flush anything still queued.
+['SIGTERM', 'SIGINT'].forEach((signal) => {
+  process.once(signal, async () => {
+    console.log(`Received ${signal}, saving before exit...`);
+    try { await flushNow(); } catch (e) { console.error('Final save failed', e); }
+    process.exit(0);
+  });
 });
+
+initDb()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`The Muster is running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Could not open the database — refusing to start.', err);
+    process.exit(1);
+  });
