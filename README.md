@@ -1,4 +1,4 @@
-# The Muster
+# 6ix Glazer Terminal
 
 A small hangout app for a friend group: log in, see everyone's live location on a
 map, drop labeled pins, join the "beer" board, chat, and check a live Clash Royale
