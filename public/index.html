@@ -142,6 +142,7 @@
       <div class="counter-body">
         <div class="mug-column">
           <div class="mug-wrap" id="mug-wrap">
+            <canvas class="glass-canvas" id="glass-canvas" tabindex="0" role="img" aria-label="Beer mug. Swipe or use arrow keys to spin."></canvas>
             <div class="mug-count" id="mug-count">0 / 50</div>
             <div class="mug-fill" id="mug-fill"></div>
             <div class="mug-handle"></div>
@@ -219,5 +220,12 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/avatars.js"></script>
 <script src="/js/app.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="/js/beerglass.js"></script>
 </body>
 </html>

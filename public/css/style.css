@@ -787,6 +787,31 @@ button {
   border-radius: 0 18px 18px 0;
 }
 
+/* 3D mug (beerglass.js) — the canvas only shows once WebGL is up, otherwise
+   the CSS mug above stays as the fallback */
+.glass-canvas {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  cursor: grab;
+  touch-action: pan-y;   /* horizontal swipe spins, vertical still scrolls */
+  outline: none;
+}
+.glass-canvas.grabbing { cursor: grabbing; }
+.glass-canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 12px; }
+.mug-wrap.glass-3d {
+  border-color: transparent;
+  background: radial-gradient(ellipse at 50% 60%, rgba(240, 185, 79, 0.12), transparent 70%);
+  overflow: visible;
+}
+.mug-wrap.glass-3d .glass-canvas { display: block; }
+.mug-wrap.glass-3d .mug-fill,
+.mug-wrap.glass-3d .mug-handle { display: none; }
+.mug-wrap.glass-3d .mug-count { pointer-events: none; }
+
 /* bottom quarter: the buttons */
 .counter-buttons {
   flex: 1;

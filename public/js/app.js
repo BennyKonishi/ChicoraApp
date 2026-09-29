@@ -463,6 +463,10 @@
     const pct = Math.max(0, Math.min(100, (count / BEER_GOAL) * 100));
     const fill = $('#mug-fill');
     if (fill) fill.style.height = pct + '%';
+    // 3D mug (beerglass.js) may load after the first render, so leave the
+    // level where it can pick it up.
+    window.__beerFillPct = pct;
+    if (window.beerGlass) window.beerGlass.setFill(pct, count, BEER_GOAL);
     const label = $('#mug-count');
     if (label) label.textContent = `${count} / ${BEER_GOAL}`;
   }
@@ -870,6 +874,7 @@
     const overlay = $('#confetti-overlay');
     const banner = $('#congrats-banner');
     if (!overlay || !banner) return;
+    if (window.beerGlass) window.beerGlass.kick(30);
 
     const colors = ['#f0b94f', '#d99a3f', '#7a9d6b', '#e5b3a9', '#f1e6d2', '#b1503f'];
     const pieceCount = 90;
@@ -904,6 +909,7 @@
     const overlay = $('#confetti-overlay');
     const banner = $('#milestone-banner');
     if (!overlay || !banner) return;
+    if (window.beerGlass) window.beerGlass.kick(12);
 
     const pieceCount = 36;
     for (let i = 0; i < pieceCount; i++) {
